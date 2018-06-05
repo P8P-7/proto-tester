@@ -7,7 +7,7 @@ import MessageCarrier_pb2
 
 from google.protobuf import json_format
 
-context = zmq.Context()
+context = zmq.Context(1)
 
 
 def send(host, port, topic, carrier_json='carrier.json'):
@@ -28,24 +28,23 @@ def send(host, port, topic, carrier_json='carrier.json'):
         print(f'Could not connect to {host}:{port}')
         return
 
-    pub.send_multipart([str.encode(topic), carrier.SerializeToString()])
+    pub.send_multipart([str.encode(str(topic)), carrier.SerializeToString()])
 
     json_file.close()
 
 
-def receive(host, port, topic):
-    print(f'Listening for messages on {host}:{port} at topic {topic}')
+def receive(port, topic):
+    print(f'Listening for messages on *:{port} at topic {topic}')
 
     try:
         sub = context.socket(zmq.SUB)
-        sub.bind(f'tcp://{host}:{port}')
-        sub.setsockopt_string(zmq.SUBSCRIBE, '')
+        sub.bind(f'tcp://*:{port}')
+        sub.setsockopt_string(zmq.SUBSCRIBE, str(topic))
     except zmq.error:
-        print(f'Could not bind to {host}:{port} on topic {topic}')
+        print(f'Could not bind to *:{port} on topic {topic}')
         return
 
     while True:
-        _ = sub.recv()
         message = sub.recv()
 
         carrier = MessageCarrier_pb2.MessageCarrier()
